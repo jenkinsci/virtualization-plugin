@@ -48,6 +48,7 @@ public class VirtualComputerLauncher extends ComputerLauncher {
             throws IOException, InterruptedException {
         taskListener.getLogger().println("Getting connection to the virtual datacenter");
         try {
+            taskListener.getLogger().println("Target virtual computer: " + virtualComputer);
         Datacenter datacenter = virtualComputer.getDatacenter().getConnection();
         taskListener.getLogger().println("Finding the computer");
         for (Computer c : datacenter.getAllComputers()) {
@@ -68,9 +69,10 @@ public class VirtualComputerLauncher extends ComputerLauncher {
         taskListener.getLogger().println("Could not find the computer");
         throw new IOException("Could not find the computer");
         } catch (IOException e) {
+            e.printStackTrace(taskListener.getLogger());
             throw e;
         } catch (Throwable t) {
-            t.printStackTrace();
+            t.printStackTrace(taskListener.getLogger());
         }
     }
 

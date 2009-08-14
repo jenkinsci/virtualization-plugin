@@ -15,7 +15,15 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.TreeMap;
+import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -41,6 +49,7 @@ public class VirtualDatacenter extends Cloud {
     private final int refreshSeconds;
 
     private transient Map<ManagedObjectId<Computer>, Computer> computers = null;
+    private transient SortedMap<String, VirtualComputer> virtualComputers = null;
     private transient long nextRefresh = 0;
     private transient Thread updatingCacheThread = null;
     private transient Datacenter datacenter = null;
@@ -85,14 +94,30 @@ public class VirtualDatacenter extends Cloud {
                     LOGGER.info("Starting cache update");
                     Map<ManagedObjectId<Computer>, Computer> computers
                             = new HashMap<ManagedObjectId<Computer>, Computer>();
+                    SortedMap<String, VirtualComputer> virtualComputers = new TreeMap<String, VirtualComputer>();
+                    Set<String> removeNames = new HashSet<String>();
+                    synchronized (VirtualDatacenter.this) {
+                        if (VirtualDatacenter.this.virtualComputers != null) {
+                            virtualComputers.putAll(VirtualDatacenter.this.virtualComputers);
+                            removeNames.addAll(VirtualDatacenter.this.virtualComputers.keySet());
+                        }
+                    }
                     try {
                         getConnection();
                         for (Computer c : datacenter.getAllComputers()) {
                             computers.put(c.getId(), c);
+                            if (!virtualComputers.containsKey(c.getName())) {
+                                virtualComputers.put(c.getName(), new VirtualComputer(VirtualDatacenter.this, c.getName()));
+                            }
+                            removeNames.remove(c.getName());
+                        }
+                        for (String name: removeNames) {
+                            virtualComputers.remove(name);
                         }
                         LOGGER.info("Saving updated cache");
                         synchronized (VirtualDatacenter.this) {
                             VirtualDatacenter.this.computers = computers;
+                            VirtualDatacenter.this.virtualComputers = virtualComputers;
                             nextRefresh = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(refreshSeconds);
                             updatingCacheThread = null;
                         }
@@ -116,14 +141,20 @@ public class VirtualDatacenter extends Cloud {
         return updatingCacheThread;
     }
 
-    public synchronized Datacenter getConnection() throws IOException, InterruptedException {
+    public Datacenter getConnection() throws IOException, InterruptedException {
         LOGGER.info("Checking for connection");
-        if (datacenter == null || !datacenter.isOpen()) {
-            LOGGER.info("Reconnect");
-            datacenter = MakeConnectionThread.getConnection(datacenterUri, username, password.toString());
+        try {
+            synchronized (this) {
+                if (datacenter == null || !datacenter.isOpen()) {
+                    LOGGER.info("Reconnect");
+                    datacenter = MakeConnectionThread.getConnection(datacenterUri, username, password.toString());
+                }
+                return datacenter;
+            }
+        } finally {
+            LOGGER.info("Have connection");
+
         }
-        LOGGER.info("Have connection");
-        return datacenter;
     }
 
     public synchronized Map<ManagedObjectId<Computer>, Computer> getComputers() {
@@ -131,6 +162,13 @@ public class VirtualDatacenter extends Cloud {
             updateComputersCache();
         }
         return computers == null ? new HashMap<ManagedObjectId<Computer>, Computer>() : computers;
+    }
+
+    public synchronized Map<String, VirtualComputer> getVirtualComputers() {
+        if (virtualComputers == null || System.currentTimeMillis() > nextRefresh) {
+            updateComputersCache();
+        }
+        return virtualComputers == null ? new HashMap<String, VirtualComputer>() : virtualComputers;
     }
 
     public Collection<NodeProvisioner.PlannedNode> provision(Label label, int i) {
@@ -141,12 +179,36 @@ public class VirtualDatacenter extends Cloud {
         return false;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("VirtualDatacenter");
+        sb.append("{datacenterUri='").append(datacenterUri).append('\'');
+        sb.append(", username='").append(username).append('\'');
+        sb.append('}');
+        return sb.toString();
+    }
+
     public Descriptor<Cloud> getDescriptor() {
         return Hudson.getInstance().getDescriptor(getClass());
     }
 
     @Extension
     public static final class DescriptorImpl extends Descriptor<Cloud> {
+        public final ConcurrentMap<String,VirtualDatacenter> datacenters = new ConcurrentHashMap<String, VirtualDatacenter>();
+
+        public VirtualDatacenter lookupDatacenter(String username, String datacenterUri) {
+            for (Cloud cloud: Hudson.getInstance().clouds) {
+                if (cloud instanceof VirtualDatacenter) {
+                    VirtualDatacenter datacenter = (VirtualDatacenter) cloud;
+                    if (username.equals(datacenter.getUsername()) && datacenterUri.equals(datacenter.getDatacenterUri())) {
+                        return datacenter;
+                    }
+                }
+            }
+            return null;
+        }
+
         public String getDisplayName() {
             return "Virtual Datacenter (via vcc-api)";
         }

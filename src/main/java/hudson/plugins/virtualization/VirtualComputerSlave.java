@@ -17,6 +17,8 @@ import java.util.ArrayList;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.Set;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.io.IOException;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -28,15 +30,29 @@ import net.java.dev.vcc.api.Computer;
  * Settings | File Templates.
  */
 public class VirtualComputerSlave extends Slave {
+
+    private static final Logger LOGGER = Logger.getLogger(VirtualComputerSlave.class.getName());
+
     @DataBoundConstructor
     public VirtualComputerSlave(String name, String nodeDescription, String remoteFS, String numExecutors,
-                                Mode mode, String labelString, ComputerLauncher launcher,
+                                Mode mode, String labelString, VirtualComputerLauncher launcher, ComputerLauncher delegateLauncher,
                                 RetentionStrategy retentionStrategy, List<? extends NodeProperty<?>> nodeProperties,
-                                VirtualComputer virtualComputer)
+                                VirtualComputer virtualComputer, String datacenterUri, String computerName)
             throws
             Descriptor.FormException, IOException {
         super(name, nodeDescription, remoteFS, Util.tryParseNumber(numExecutors, 1).intValue(), mode, labelString,
-                new VirtualComputerLauncher(launcher, virtualComputer), retentionStrategy, nodeProperties);
+                launcher == null ? new VirtualComputerLauncher(delegateLauncher, virtualComputer) : launcher,
+                retentionStrategy, nodeProperties);
+        LOGGER.log(Level.WARNING, "VirtualComputer={0}\ndatacenterUri={1}\ncomputerName={2}", new Object[]{virtualComputer, datacenterUri, computerName});
+        virtualComputer.getClass(); // throw NPE if null
+    }
+
+    public ComputerLauncher getDelegateLauncher() {
+        return ((VirtualComputerLauncher)getLauncher()).getDelegate();
+    }
+
+    public VirtualComputer getVirtualComputer() {
+        return ((VirtualComputerLauncher)getLauncher()).getVirtualComputer();
     }
 
     @Extension
@@ -55,9 +71,7 @@ public class VirtualComputerSlave extends Slave {
             for (Cloud cloud: Hudson.getInstance().clouds) {
                 if (cloud instanceof VirtualDatacenter) {
                     VirtualDatacenter datacenter = VirtualDatacenter.class.cast(cloud);
-                    for (Computer b: datacenter.getComputers().values()) {
-                        result.add(new VirtualComputer(datacenter, b.getName()));
-                    }
+                    result.addAll(datacenter.getVirtualComputers().values());
                 }
             }
             return result;

@@ -1,13 +1,25 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <f:dropdownList name="slave.virtualComputer" title="${%Virtual Computer}"
-                    help="${descriptor.getHelpFile('virtualComputer')}">
-      <j:forEach var="vc" items="${descriptor.getVirtualComputers()}" varStatus="loop">
-        <f:dropdownListBlock value="${d}" name="${vc.displayName}"
-                             selected="${it.virtualComputer==vc}"
-                             title="${vc.displayName}"/>
-      </j:forEach>
-    </f:dropdownList>
+    <tr>
+        <td class="setting-leftspace"><st:nbsp/></td>
+        <td class="setting-name">
+            ${%Virtual Computer}
+        </td>
+        <td class="setting-main">
+            <!-- create drop-down list -->
+            <select class="setting-input" id="${h.generateId()}">
+                <j:forEach var="vc" items="${descriptor.getVirtualComputers()}" varStatus="loop">
+                    <f:option selected="${it.virtualComputer==vc}" value="${vc.displayName}">${vc.displayName}</f:option>
+                </j:forEach>
+            </select>
+        </td>
+        <j:if test="${descriptor.getHelpFile('virtualComputer')!=null}">
+            <td class="setting-help">
+                <a href="#" class="help-button" helpURL="${rootURL}${descriptor.getHelpFile('virtualComputer')}">
+                    <img src="${imagesURL}/16x16/help.gif" alt="Help for feature: ${%Virtual Computer}"/></a>
+            </td>
+        </j:if>
+    </tr>
 
   <f:entry title="${%Description}" help="/help/system-config/master-slave/description.html">
     <f:textbox field="nodeDescription" />
@@ -27,15 +39,15 @@
 
   <f:slave-mode name="mode" node="${it}" />
 
-  <f:dropdownList name="slave.launcher" title="${%Secondary launch method}"
+  <f:dropdownList name="slave.delegateLauncher" title="${%Secondary launch method}"
                   help="${descriptor.getHelpFile('launcher')}">
     <j:forEach var="d" items="${descriptor.getComputerLauncherDescriptors()}" varStatus="loop">
       <f:dropdownListBlock value="${d.clazz.name}" name="${d.displayName}"
-                           selected="${it.launcher.descriptor==d}"
+                           selected="${it.delegateLauncher.descriptor==d}"
                            title="${d.displayName}">
         <j:set var="descriptor" value="${d}"/>
         <j:set var="instance"
-               value="${it.launcher.descriptor==d ? it.launcher : null}"/>
+               value="${it.delegateLauncher.descriptor==d ? it.delegateLauncher : null}"/>
         <tr><td>
           <input type="hidden" name="stapler-class" value="${d.clazz.name}" />
         </td></tr>

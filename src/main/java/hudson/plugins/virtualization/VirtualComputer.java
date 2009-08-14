@@ -28,6 +28,14 @@ public class VirtualComputer implements Serializable, Comparable<VirtualComputer
         return datacenter;
     }
 
+    public String getComputerName() {
+        return name;
+    }
+
+    public String getDatacenterUri() {
+        return datacenter.getDatacenterUri();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -62,5 +70,15 @@ public class VirtualComputer implements Serializable, Comparable<VirtualComputer
 
     public int compareTo(VirtualComputer o) {
         return name.compareTo(o.getName());
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("VirtualComputer");
+        sb.append("{name='").append(name).append('\'');
+        sb.append(", datacenter=").append(datacenter);
+        sb.append('}');
+        return sb.toString();
     }
 }
