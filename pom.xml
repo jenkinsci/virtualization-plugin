@@ -37,7 +37,7 @@
     <dependency>
       <groupId>net.java.dev.vcc</groupId>
       <artifactId>vcc-vmware-esx-impl</artifactId>
-      <version>0.0.3</version>
+      <version>0.0.4-SNAPSHOT</version>
       <scope>runtime</scope>
     </dependency>
 
