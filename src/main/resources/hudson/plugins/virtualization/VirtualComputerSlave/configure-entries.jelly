@@ -1,83 +1,85 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
          xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <tr>
-        <td class="setting-leftspace"><st:nbsp/></td>
-        <td class="setting-name">
-            ${%Virtual Computer}
-        </td>
-        <td class="setting-main">
-            <!-- create drop-down list -->
-            <select class="setting-input" id="${h.generateId()}">
-                <j:forEach var="vc" items="${descriptor.getVirtualComputers()}" varStatus="loop">
-                    <f:option selected="${it.virtualComputer==vc}" value="${vc.displayName}">${vc.displayName}</f:option>
-                </j:forEach>
-            </select>
-        </td>
-        <j:if test="${descriptor.getHelpFile('virtualComputer')!=null}">
-            <td class="setting-help">
-                <a href="#" class="help-button" helpURL="${rootURL}${descriptor.getHelpFile('virtualComputer')}">
-                    <img src="${imagesURL}/16x16/help.gif" alt="Help for feature: ${%Virtual Computer}"/></a>
-            </td>
-        </j:if>
-    </tr>
-
-  <f:entry title="${%Description}" help="/help/system-config/master-slave/description.html">
-    <f:textbox field="nodeDescription" />
-  </f:entry>
-
-  <f:entry title="${%# of executors}" field="numExecutors">
-    <f:textbox />
-  </f:entry>
-
-  <f:entry title="${%Remote FS root}" field="remoteFS">
-    <f:textbox />
-  </f:entry>
-
-  <f:entry title="${%Labels}" field="labelString">
-    <f:textbox />
-  </f:entry>
-
-  <f:slave-mode name="mode" node="${it}" />
-
-  <f:dropdownList name="slave.delegateLauncher" title="${%Secondary launch method}"
-                  help="${descriptor.getHelpFile('launcher')}">
-    <j:forEach var="d" items="${descriptor.getComputerLauncherDescriptors()}" varStatus="loop">
-      <f:dropdownListBlock value="${d.clazz.name}" name="${d.displayName}"
-                           selected="${it.delegateLauncher.descriptor==d}"
-                           title="${d.displayName}">
-        <j:set var="descriptor" value="${d}"/>
-        <j:set var="instance"
-               value="${it.delegateLauncher.descriptor==d ? it.delegateLauncher : null}"/>
-        <tr><td>
-          <input type="hidden" name="stapler-class" value="${d.clazz.name}" />
-        </td></tr>
-        <st:include from="${d}" page="${d.configPage}" optional="true"/>
-      </f:dropdownListBlock>
-    </j:forEach>
-  </f:dropdownList>
-
-  <!-- pointless to show this if there's only one option, which is the default -->
-  <j:if test="${h.getRetentionStrategyDescriptors().size() gt 1}">
-    <f:dropdownList name="slave.retentionStrategy" title="${%Availability}"
-                    help="/help/system-config/master-slave/availability.html">
-      <j:forEach var="d" items="${h.getRetentionStrategyDescriptors()}">
-        <j:if test="${d != null}">
-          <f:dropdownListBlock value="${d.clazz.name}" name="${d.displayName}"
-                               selected="${it.retentionStrategy.descriptor==d}"
-                               title="${d.displayName}">
-            <j:set var="descriptor" value="${d}"/>
-            <j:set var="instance"
-                   value="${it.retentionStrategy.descriptor==d ? it.retentionStrategy : null}"/>
-            <tr><td>
-              <input type="hidden" name="stapler-class" value="${d.clazz.name}" />
-            </td></tr>
-            <st:include from="${d}" page="${d.configPage}" optional="true"/>
-          </f:dropdownListBlock>
-        </j:if>
-      </j:forEach>
+    <f:dropdownList field="datacenterUri" title="${%Datacenter URI}"
+                    help="${descriptor.getHelpFile('datacenterUri')}">
+        <j:forEach var="d" items="${descriptor.getDatacenters()}" varStatus="loop">
+            <f:dropdownListBlock value="${d.datacenterUri}" name="${d.datacenterUri}"
+                                 selected="${it.datacenterUri==d.datacenterUri}"
+                                 title="${d.datacenterUri}">
+            </f:dropdownListBlock>
+        </j:forEach>
     </f:dropdownList>
-  </j:if>
 
-  <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}" field="nodeProperties" />
+    <f:entry title="${%Computer Name}" field="computerName">
+        <f:editableComboBox id="computerName" name="computerName" clazz="setting-input">
+            <j:forEach var="vc" items="${descriptor.getVirtualComputers()}" varStatus="loop">
+                <f:editableComboBoxValue value="${vc.name}" />
+            </j:forEach>
+        </f:editableComboBox>
+    </f:entry>
+
+    <f:entry title="${%Description}" help="/help/system-config/master-slave/description.html">
+        <f:textbox field="nodeDescription"/>
+    </f:entry>
+
+    <f:entry title="${%# of executors}" field="numExecutors">
+        <f:textbox/>
+    </f:entry>
+
+    <f:entry title="${%Remote FS root}" field="remoteFS">
+        <f:textbox/>
+    </f:entry>
+
+    <f:entry title="${%Labels}" field="labelString">
+        <f:textbox/>
+    </f:entry>
+
+    <f:slave-mode name="mode" node="${it}"/>
+
+    <f:dropdownList name="slave.delegateLauncher" title="${%Secondary launch method}"
+                    help="${descriptor.getHelpFile('launcher')}">
+        <j:forEach var="d" items="${descriptor.getComputerLauncherDescriptors()}" varStatus="loop">
+            <f:dropdownListBlock value="${d.clazz.name}" name="${d.displayName}"
+                                 selected="${it.delegateLauncher.descriptor==d}"
+                                 title="${d.displayName}">
+                <j:set var="descriptor" value="${d}"/>
+                <j:set var="instance"
+                       value="${it.delegateLauncher.descriptor==d ? it.delegateLauncher : null}"/>
+                <tr>
+                    <td>
+                        <input type="hidden" name="stapler-class" value="${d.clazz.name}"/>
+                    </td>
+                </tr>
+                <st:include from="${d}" page="${d.configPage}" optional="true"/>
+            </f:dropdownListBlock>
+        </j:forEach>
+    </f:dropdownList>
+
+    <!-- pointless to show this if there's only one option, which is the default -->
+    <j:if test="${h.getRetentionStrategyDescriptors().size() gt 1}">
+        <f:dropdownList name="slave.retentionStrategy" title="${%Availability}"
+                        help="/help/system-config/master-slave/availability.html">
+            <j:forEach var="d" items="${h.getRetentionStrategyDescriptors()}">
+                <j:if test="${d != null}">
+                    <f:dropdownListBlock value="${d.clazz.name}" name="${d.displayName}"
+                                         selected="${it.retentionStrategy.descriptor==d}"
+                                         title="${d.displayName}">
+                        <j:set var="descriptor" value="${d}"/>
+                        <j:set var="instance"
+                               value="${it.retentionStrategy.descriptor==d ? it.retentionStrategy : null}"/>
+                        <tr>
+                            <td>
+                                <input type="hidden" name="stapler-class" value="${d.clazz.name}"/>
+                            </td>
+                        </tr>
+                        <st:include from="${d}" page="${d.configPage}" optional="true"/>
+                    </f:dropdownListBlock>
+                </j:if>
+            </j:forEach>
+        </f:dropdownList>
+    </j:if>
+
+    <f:descriptorList title="${%Node Properties}" descriptors="${h.getNodePropertyDescriptors(descriptor.clazz)}"
+                      field="nodeProperties"/>
 
 </j:jelly>

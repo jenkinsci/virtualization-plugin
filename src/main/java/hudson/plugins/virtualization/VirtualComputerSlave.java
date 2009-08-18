@@ -37,14 +37,22 @@ public class VirtualComputerSlave extends Slave {
     public VirtualComputerSlave(String name, String nodeDescription, String remoteFS, String numExecutors,
                                 Mode mode, String labelString, VirtualComputerLauncher launcher, ComputerLauncher delegateLauncher,
                                 RetentionStrategy retentionStrategy, List<? extends NodeProperty<?>> nodeProperties,
-                                VirtualComputer virtualComputer, String datacenterUri, String computerName)
+                                String datacenterUri, String computerName)
             throws
             Descriptor.FormException, IOException {
         super(name, nodeDescription, remoteFS, Util.tryParseNumber(numExecutors, 1).intValue(), mode, labelString,
-                launcher == null ? new VirtualComputerLauncher(delegateLauncher, virtualComputer) : launcher,
+                launcher == null ? new VirtualComputerLauncher(delegateLauncher, findVirtualComputer(datacenterUri, computerName)) : launcher,
                 retentionStrategy, nodeProperties);
-        LOGGER.log(Level.WARNING, "VirtualComputer={0}\ndatacenterUri={1}\ncomputerName={2}", new Object[]{virtualComputer, datacenterUri, computerName});
-        virtualComputer.getClass(); // throw NPE if null
+    }
+
+    private static VirtualComputer findVirtualComputer(String datacenterUri, String computerName) {
+        computerName.getClass();
+        for (VirtualComputer c:  ((DescriptorImpl)Hudson.getInstance().getDescriptor(VirtualComputerSlave.class)).getVirtualComputers()) {
+            if ((datacenterUri == null || datacenterUri.equals(c.getDatacenterUri())) && computerName.equals(c.getComputerName())) {
+                return c;
+            }
+        }
+        return null;
     }
 
     public ComputerLauncher getDelegateLauncher() {
@@ -53,6 +61,14 @@ public class VirtualComputerSlave extends Slave {
 
     public VirtualComputer getVirtualComputer() {
         return ((VirtualComputerLauncher)getLauncher()).getVirtualComputer();
+    }
+
+    public String getDatacenterUri() {
+        return getVirtualComputer().getDatacenterUri();
+    }
+
+    public String getComputerName() {
+        return getVirtualComputer().getComputerName();
     }
 
     @Extension
