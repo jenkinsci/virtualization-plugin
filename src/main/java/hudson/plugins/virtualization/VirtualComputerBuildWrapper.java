@@ -13,7 +13,6 @@ import hudson.model.ResourceList;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerLauncher;
 import hudson.tasks.BuildWrapper;
-import net.java.dev.vcc.api.Command;
 import net.java.dev.vcc.api.Computer;
 import net.java.dev.vcc.api.Datacenter;
 import net.java.dev.vcc.api.PowerState;
@@ -28,12 +27,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 
@@ -62,7 +58,6 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
             public boolean tearDown(AbstractBuild abstractBuild, BuildListener buildListener)
                     throws IOException, InterruptedException {
                 boolean failed = false;
-                Map<String, Command> pendingOperations = new TreeMap<String, Command>();
                 for (VirtualComputerResource resource : resources) {
                     VirtualComputer virtualComputer = resource.getVirtualComputer();
                     if (virtualComputer == null) {
@@ -75,7 +70,16 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                             if (PowerState.RUNNING.equals(c.getState())) {
                                 buildListener.getLogger()
                                         .println("[virtualization] Suspending virtual computer " + name);
-                                pendingOperations.put(name, c.execute(new SuspendComputer()));
+                                try {
+                                    c.execute(new SuspendComputer()).get();
+                                    buildListener.getLogger()
+                                            .println("[virtualization] Virtual computer " + name + " suspended");
+                                } catch (ExecutionException e) {
+                                    buildListener
+                                            .error("[virtualization] Could not suspend virtual computer {0}", name);
+                                    e.printStackTrace(buildListener.getLogger());
+                                    failed = true;
+                                }
                             } else {
                                 buildListener.getLogger()
                                         .println("[virtualization] Virtual computer " + name + " is already suspended");
@@ -83,30 +87,10 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                         }
                     }
                 }
-                while (!pendingOperations.isEmpty()) {
-                    Iterator<Map.Entry<String, Command>> i = pendingOperations.entrySet().iterator();
-                    while (i.hasNext()) {
-                        Map.Entry<String, Command> entry = i.next();
-                        Command pendingOperation = entry.getValue();
-                        try {
-                            pendingOperation.get();
-                            i.remove();
-                            buildListener.getLogger()
-                                    .println("[virtualization] Virtual computer " + entry.getKey() + " suspended");
-                        } catch (ExecutionException e) {
-                            buildListener
-                                    .error("[virtualization] Could not suspend virtual computer {0}", entry.getKey());
-                            e.printStackTrace(buildListener.getLogger());
-                            i.remove();
-                            failed = true;
-                        }
-                    }
-                }
                 return !failed;
             }
         }
         boolean failed = false;
-        Map<String, Command> pendingOperations = new TreeMap<String, Command>();
         for (VirtualComputerResource resource : resources) {
             VirtualComputer virtualComputer = resource.getVirtualComputer();
             if (virtualComputer == null) {
@@ -120,7 +104,14 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                     found = true;
                     if (!PowerState.RUNNING.equals(c.getState())) {
                         buildListener.getLogger().println("[virtualization] Starting virtual computer " + name);
-                        pendingOperations.put(name, c.execute(new StartComputer()));
+                        try {
+                            c.execute(new StartComputer()).get();
+                            buildListener.getLogger().println("[virtualization] Virtual computer " + name + " started");
+                        } catch (ExecutionException e) {
+                            buildListener.fatalError("[virtualization] Could not start virtual computer {0}", name);
+                            e.printStackTrace(buildListener.getLogger());
+                            failed = true;
+                        }
                     } else {
                         buildListener.getLogger()
                                 .println("[virtualization] Virtual computer " + name + " is already started");
@@ -132,24 +123,6 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                 failed = true;
                 buildListener.getLogger().println("[virtualization] Could not find virtual computer " + name);
                 break;
-            }
-        }
-        while (!pendingOperations.isEmpty()) {
-            Iterator<Map.Entry<String, Command>> i = pendingOperations.entrySet().iterator();
-            while (i.hasNext()) {
-                Map.Entry<String, Command> entry = i.next();
-                Command pendingOperation = entry.getValue();
-                try {
-                    pendingOperation.get();
-                    i.remove();
-                    buildListener.getLogger()
-                            .println("[virtualization] Virtual computer " + entry.getKey() + " started");
-                } catch (ExecutionException e) {
-                    buildListener.fatalError("[virtualization] Could not start virtual computer {0}", entry.getKey());
-                    e.printStackTrace(buildListener.getLogger());
-                    failed = true;
-                    i.remove();
-                }
             }
         }
         if (failed) {

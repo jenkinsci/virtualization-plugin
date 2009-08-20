@@ -25,10 +25,10 @@
                     </select>
                 </f:entry>
 
-                <div align="right">
-                    <f:repeatableDeleteButton/>
-                </div>
             </table>
+            <div align="right">
+                <f:repeatableDeleteButton/>
+            </div>
         </f:repeatable>
     </f:entry>
 </j:jelly>
