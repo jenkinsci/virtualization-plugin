@@ -32,6 +32,8 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A virtual computer that is used as a build resource.
@@ -74,7 +76,16 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                                 listener.getLogger()
                                         .println("[virtualization] Suspending virtual computer " + name);
                                 try {
-                                    c.execute(new SuspendComputer()).get();
+                                    SuspendComputer future = c.execute(new SuspendComputer());
+                                    while (!PowerState.SUSPENDED.equals(c.getState())) {
+                                        try {
+                                            future.get(5, TimeUnit.SECONDS);
+                                        } catch (TimeoutException e) {
+                                            listener.getLogger().println(
+                                                    "[virtualization] Waiting for virtual computer " + name
+                                                            + " to suspend...");
+                                        }
+                                    }
                                     listener.getLogger()
                                             .println("[virtualization] Virtual computer " + name + " suspended");
                                 } catch (ExecutionException e) {
@@ -110,7 +121,15 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                     if (!PowerState.RUNNING.equals(c.getState())) {
                         listener.getLogger().println("[virtualization] Starting virtual computer " + name);
                         try {
-                            c.execute(new StartComputer()).get();
+                            StartComputer future = c.execute(new StartComputer());
+                            while (!PowerState.RUNNING.equals(c.getState())) {
+                                try {
+                                    future.get(5, TimeUnit.SECONDS);
+                                } catch (TimeoutException e) {
+                                    listener.getLogger().println(
+                                            "[virtualization] Waiting for virtual computer " + name + " to start...");
+                                }
+                            }
                             listener.getLogger().println("[virtualization] Virtual computer " + name + " started");
                         } catch (ExecutionException e) {
                             listener.fatalError("[virtualization] Could not start virtual computer {0}", name);
