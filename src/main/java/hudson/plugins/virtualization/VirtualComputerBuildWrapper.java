@@ -51,11 +51,11 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
     }
 
     @Override
-    public Environment setUp(AbstractBuild abstractBuild, Launcher launcher, BuildListener buildListener)
+    public Environment setUp(AbstractBuild abstractBuild, Launcher launcher, BuildListener listener)
             throws IOException, InterruptedException {
         class EnvironmentImpl extends Environment {
             @Override
-            public boolean tearDown(AbstractBuild abstractBuild, BuildListener buildListener)
+            public boolean tearDown(AbstractBuild abstractBuild, BuildListener listener)
                     throws IOException, InterruptedException {
                 boolean failed = false;
                 for (VirtualComputerResource resource : resources) {
@@ -67,21 +67,24 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
                     Datacenter datacenter = virtualComputer.getDatacenter().getConnection();
                     for (Computer c : datacenter.getAllComputers()) {
                         if (virtualComputer.getName().equals(c.getName())) {
+                            listener.getLogger()
+                                    .println("[virtualization] Virtual computer " + name + " is in state " + c
+                                            .getState());
                             if (PowerState.RUNNING.equals(c.getState())) {
-                                buildListener.getLogger()
+                                listener.getLogger()
                                         .println("[virtualization] Suspending virtual computer " + name);
                                 try {
                                     c.execute(new SuspendComputer()).get();
-                                    buildListener.getLogger()
+                                    listener.getLogger()
                                             .println("[virtualization] Virtual computer " + name + " suspended");
                                 } catch (ExecutionException e) {
-                                    buildListener
+                                    listener
                                             .error("[virtualization] Could not suspend virtual computer {0}", name);
-                                    e.printStackTrace(buildListener.getLogger());
+                                    e.printStackTrace(listener.getLogger());
                                     failed = true;
                                 }
                             } else {
-                                buildListener.getLogger()
+                                listener.getLogger()
                                         .println("[virtualization] Virtual computer " + name + " is already suspended");
                             }
                         }
@@ -102,18 +105,20 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
             for (Computer c : datacenter.getAllComputers()) {
                 if (name.equals(c.getName())) {
                     found = true;
+                    listener.getLogger()
+                            .println("[virtualization] Virtual computer " + name + " is in state " + c.getState());
                     if (!PowerState.RUNNING.equals(c.getState())) {
-                        buildListener.getLogger().println("[virtualization] Starting virtual computer " + name);
+                        listener.getLogger().println("[virtualization] Starting virtual computer " + name);
                         try {
                             c.execute(new StartComputer()).get();
-                            buildListener.getLogger().println("[virtualization] Virtual computer " + name + " started");
+                            listener.getLogger().println("[virtualization] Virtual computer " + name + " started");
                         } catch (ExecutionException e) {
-                            buildListener.fatalError("[virtualization] Could not start virtual computer {0}", name);
-                            e.printStackTrace(buildListener.getLogger());
+                            listener.fatalError("[virtualization] Could not start virtual computer {0}", name);
+                            e.printStackTrace(listener.getLogger());
                             failed = true;
                         }
                     } else {
-                        buildListener.getLogger()
+                        listener.getLogger()
                                 .println("[virtualization] Virtual computer " + name + " is already started");
                     }
                     break;
@@ -121,12 +126,12 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
             }
             if (!found) {
                 failed = true;
-                buildListener.getLogger().println("[virtualization] Could not find virtual computer " + name);
+                listener.getLogger().println("[virtualization] Could not find virtual computer " + name);
                 break;
             }
         }
         if (failed) {
-            new EnvironmentImpl().tearDown(abstractBuild, buildListener);
+            new EnvironmentImpl().tearDown(abstractBuild, listener);
             return null;
         }
         return new EnvironmentImpl();
@@ -240,7 +245,7 @@ public class VirtualComputerBuildWrapper extends BuildWrapper implements Resourc
         }
 
         public String getDisplayName() {
-            return "Slave virtual computer running on a virtualization platform (via vcc-api)";
+            return "Use a virtual computer running on a virtualization platform (via vcc-api) as a build resource";
         }
 
         public Set<VirtualComputer> getVirtualComputers() {
