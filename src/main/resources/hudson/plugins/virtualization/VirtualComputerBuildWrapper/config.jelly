@@ -1,0 +1,34 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="${%Virtual computers}">
+        <j:set var="vcdescriptor" value="${descriptor}"/>
+        <f:repeatable varStatus="loopStatus" field="resources" minimum="1">
+            <table width="100%">
+                <f:entry title="${%Datacenter URI}" field="datacenterUri">
+                    <select class="setting-input" name="datacenterUri" value="${instance.datacenterUri}">
+                        <j:forEach var="d" items="${vcdescriptor.getDatacenters()}">
+                            <option value="${d.datacenterUri}"
+                                    selected="${instance.datacenterUri==d.datacenterUri?'true':null}">
+                                ${d.datacenterUri}
+                            </option>
+                        </j:forEach>
+                    </select>
+                </f:entry>
+
+                <f:entry title="${%Computer Name}" field="computerName">
+                    <select class="setting-input" name="computerName" value="${instance.computerName}">
+                        <j:forEach var="vc" items="${vcdescriptor.getVirtualComputers()}" varStatus="loop">
+                            <option selected="${vc.name==instance.computerName?'selected':null}">
+                                ${vc.name}
+                            </option>
+                        </j:forEach>
+                    </select>
+                </f:entry>
+
+                <div align="right">
+                    <f:repeatableDeleteButton/>
+                </div>
+            </table>
+        </f:repeatable>
+    </f:entry>
+</j:jelly>

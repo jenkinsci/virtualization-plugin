@@ -3,7 +3,7 @@
     <f:dropdownList field="datacenterUri" title="${%Datacenter URI}"
                     help="${descriptor.getHelpFile('datacenterUri')}">
         <j:forEach var="d" items="${descriptor.getDatacenters()}" varStatus="loop">
-            <f:dropdownListBlock value="${d.datacenterUri}" name="${d.datacenterUri}"
+            <f:dropdownListBlock value="${d.datacenterUri}"
                                  selected="${it.datacenterUri==d.datacenterUri}"
                                  title="${d.datacenterUri}">
             </f:dropdownListBlock>
@@ -11,11 +11,13 @@
     </f:dropdownList>
 
     <f:entry title="${%Computer Name}" field="computerName">
-        <f:editableComboBox id="computerName" name="computerName" clazz="setting-input">
+        <select class="setting-input" name="computerName" value="${instance.computerName}">
             <j:forEach var="vc" items="${descriptor.getVirtualComputers()}" varStatus="loop">
-                <f:editableComboBoxValue value="${vc.name}" />
+                <option selected="${vc.name==instance.computerName?'selected':null}">
+                    ${vc.name}
+                </option>
             </j:forEach>
-        </f:editableComboBox>
+        </select>
     </f:entry>
 
     <f:entry title="${%Description}" help="/help/system-config/master-slave/description.html">
